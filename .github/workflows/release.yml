@@ -108,7 +108,7 @@ jobs:
           path: ./output/linux/arm64/alpine
 
   create_release:
-    needs: [build_arm64, build_arm64]
+    needs: [build_amd64, build_arm64]
     runs-on: ubuntu-latest
     steps:
       - name: Checkout repository
