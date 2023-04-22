@@ -1,0 +1,21 @@
+{
+  "yaml.schemas": {
+    "https://json.schemastore.org/github-workflow": [".github/workflows/*.yml", ".github/workflows/*.yaml"],
+    "https://json.schemastore.org/github-action": [".github/action.yml", ".github/action.yaml"],
+    "https://json.schemastore.org/ansible-role-2.9": ["roles/**/*.yml", "roles/**/*.yaml"],
+    "https://json.schemastore.org/prettierrc": [".prettierrc.yml", ".prettierrc.yaml"],
+    "https://json.schemastore.org/stylelintrc": [".stylelintrc.yml", ".stylelintrc.yaml"],
+    "https://json.schemastore.org/circleciconfig": [".circleci/config.yml", ".circleci/config.yaml"],
+    "https://json.schemastore.org/gitlab-ci": [".gitlab-ci.yml", ".gitlab-ci.yaml"]
+  },
+  "editor.tabSize": 2,
+  "editor.formatOnSave": true,
+  "editor.codeActionsOnSave": {
+    "source.fixAll.shellcheck": true
+  },
+  "[yaml]": {
+    "editor.quickSuggestions": {
+      "strings": true
+    }
+  }
+}

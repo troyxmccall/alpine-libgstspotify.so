@@ -1,0 +1,134 @@
+name: Release libgstspotify.so
+
+on:
+  release:
+    types: [created]
+
+jobs:
+  prepare:
+    runs-on: ubuntu-latest
+    outputs:
+      dockerfile_hash: ${{ steps.calculate_hash.outputs.hash }}
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+
+      - name: Calculate Dockerfile hash
+        id: calculate_hash
+        run: |
+          echo "hash=$(sha256sum Dockerfile | awk '{print $1}')" >> $GITHUB_ENV
+
+  build_amd64:
+    needs: prepare
+    runs-on: ubuntu-latest
+    env:
+      GST_PLUGINS_RS_TAG: gstreamer-1.22.2
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+
+      - name: Cache build artifacts
+        id: cache-build
+        uses: actions/cache@v3
+        with:
+          path: ./output/linux/amd64/alpine
+          key: ${{ runner.os }}-amd64-libgstspotify-${{ needs.prepare.outputs.dockerfile_hash }}-${{ env.GST_PLUGINS_RS_TAG }}
+          restore-keys: |
+            ${{ runner.os }}-amd64-libgstspotify-${{ needs.prepare.outputs.dockerfile_hash }}-
+
+      - name: Set up Docker Buildx
+        if: steps.cache-build.outputs.cache-hit != 'true'
+        uses: docker/setup-buildx-action@v2
+
+      - name: Build libgstspotify.so
+        if: steps.cache-build.outputs.cache-hit != 'true'
+        run: |
+          docker buildx build --platform linux/amd64 --tag libgstspotify-builder --load --target final --build-arg GST_PLUGINS_RS_TAG=${{ env.GST_PLUGINS_RS_TAG }} --progress=plain .
+
+      - name: save libgstspotify.so and checksums
+        if: steps.cache-build.outputs.cache-hit != 'true'
+        run: |
+          mkdir -p ./output/linux/amd64/alpine/ 
+          docker create --name libgstspotify-container libgstspotify-builder 
+          docker cp libgstspotify-container:/usr/lib/gstreamer-1.0/libgstspotify.so ./output/linux/amd64/alpine/libgstspotify.so 
+          sha256sum ./output/linux/amd64/alpine/libgstspotify.so > ./output/linux/amd64/alpine/libgstspotify.so.sha256
+          tar czf ./output/linux/amd64/alpine/libgstspotify-amd64.tar.gz -C ./output/linux/amd64/alpine libgstspotify.so
+          sha256sum ./output/linux/amd64/alpine/libgstspotify-amd64.tar.gz > ./output/linux/amd64/alpine/libgstspotify-amd.tar.gz.sha256
+
+      - name: Upload amd64 artifacts
+        uses: actions/upload-artifact@v3
+        with:
+          name: libgstspotify-amd64
+          path: ./output/linux/amd64/alpine
+
+  build_arm64:
+    needs: prepare
+    runs-on: ubuntu-latest
+    env:
+      GST_PLUGINS_RS_TAG: gstreamer-1.22.2
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+
+      - name: Cache build artifacts
+        uses: actions/cache@v3
+        with:
+          path: ./output/linux/arm64/alpine
+          key: ${{ runner.os }}-arm64-libgstspotify-${{ needs.prepare.outputs.dockerfile_hash }}-${{ env.GST_PLUGINS_RS_TAG }}
+          restore-keys: |
+            ${{ runner.os }}-arm64-libgstspotify-${{ needs.prepare.outputs.dockerfile_hash }}-
+
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v2
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v2
+
+      - name: Build libgstspotify.so
+        run: |
+          docker buildx build --platform linux/arm64 --tag libgstspotify-builder --load --target final --build-arg GST_PLUGINS_RS_TAG=${{ env.GST_PLUGINS_RS_TAG }} --progress=plain .
+
+      - name: Create container and copy libgstspotify.so
+        run: |
+          mkdir -p ./output/linux/arm64/alpine/ 
+          docker create --name libgstspotify-container libgstspotify-builder 
+          docker cp libgstspotify-container:/usr/lib/gstreamer-1.0/libgstspotify.so ./output/linux/arm64/alpine/libgstspotify.so 
+          sha256sum ./output/linux/arm64/alpine/libgstspotify.so > ./output/linux/arm64/alpine/libgstspotify.so.sha256
+          tar czf ./output/linux/arm64/alpine/libgstspotify-arm64.tar.gz -C ./output/linux/arm64/alpine libgstspotify.so
+          sha256sum ./output/linux/arm64/alpine/libgstspotify-arm64.tar.gz > ./output/linux/arm64/alpine/libgstspotify-arm64.tar.gz.sha256
+
+      - name: Upload arm64 artifacts
+        uses: actions/upload-artifact@v3
+        with:
+          name: libgstspotify-arm64
+          path: ./output/linux/arm64/alpine
+
+  create_release:
+    needs: [build_amd64, build_arm64]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+
+      - name: Download amd64 artifacts
+        uses: actions/download-artifact@v3
+        with:
+          name: libgstspotify-amd64
+          path: ./output/linux/amd64/alpine
+
+      - name: Download arm64 artifacts
+        uses: actions/download-artifact@v3
+        with:
+          name: libgstspotify-arm64
+          path: ./output/linux/arm64/alpine
+
+      - name: Upload Release Artifacts
+        uses: softprops/action-gh-release@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.RELEASE_TOKEN }}
+        with:
+          files: |
+            ./output/linux/amd64/alpine/libgstspotify-amd64.tar.gz
+            ./output/linux/amd64/alpine/libgstspotify-amd64.tar.gz.sha256
+            ./output/linux/arm64/alpine/libgstspotify-arm64.tar.gz
+            ./output/linux/arm64/alpine/libgstspotify-arm64.tar.gz.sha256

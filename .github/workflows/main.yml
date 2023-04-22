@@ -1,0 +1,74 @@
+name: Build libgstspotify.so
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  prepare:
+    runs-on: ubuntu-latest
+    outputs:
+      dockerfile_hash: ${{ steps.calculate_hash.outputs.hash }}
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+
+      - name: Calculate Dockerfile hash
+        id: calculate_hash
+        run: |
+          echo "hash=$(sha256sum Dockerfile | awk '{print $1}')" >> $GITHUB_ENV
+
+  build_amd64:
+    needs: prepare
+    runs-on: ubuntu-latest
+    env:
+      GST_PLUGINS_RS_TAG: gstreamer-1.22.2
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+
+      - name: Cache build artifacts
+        id: cache-build
+        uses: actions/cache@v3
+        with:
+          path: ./output/linux/amd64/alpine
+          key: ${{ runner.os }}-amd64-libgstspotify-${{ needs.prepare.outputs.dockerfile_hash }}-${{ env.GST_PLUGINS_RS_TAG }}
+          restore-keys: |
+            ${{ runner.os }}-amd64-libgstspotify-${{ needs.prepare.outputs.dockerfile_hash }}-
+
+      - name: Set up Docker Buildx
+        if: steps.cache-build.outputs.cache-hit != 'true'
+        uses: docker/setup-buildx-action@v2
+
+      - name: Build libgstspotify.so
+        if: steps.cache-build.outputs.cache-hit != 'true'
+        run: |
+          docker buildx build --platform linux/amd64 --tag libgstspotify-builder --load --target final --build-arg GST_PLUGINS_RS_TAG=${{ env.GST_PLUGINS_RS_TAG }} --progress=plain .
+
+  build_arm64:
+    needs: prepare
+    runs-on: ubuntu-latest
+    env:
+      GST_PLUGINS_RS_TAG: gstreamer-1.22.2
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+
+      - name: Cache build artifacts
+        uses: actions/cache@v3
+        with:
+          path: ./output/linux/arm64/alpine
+          key: ${{ runner.os }}-arm64-libgstspotify-${{ needs.prepare.outputs.dockerfile_hash }}-${{ env.GST_PLUGINS_RS_TAG }}
+          restore-keys: |
+            ${{ runner.os }}-arm64-libgstspotify-${{ needs.prepare.outputs.dockerfile_hash }}-
+
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v2
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v2
+
+      - name: Build libgstspotify.so
+        run: |
+          docker buildx build --platform linux/arm64 --tag libgstspotify-builder --load --target final --build-arg GST_PLUGINS_RS_TAG=${{ env.GST_PLUGINS_RS_TAG }} --progress=plain .
