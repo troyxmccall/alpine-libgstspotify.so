@@ -15,38 +15,38 @@ USER root
 
 # Install all libraries and needs
 RUN apk add --no-cache \
-        alsa-lib-dev \
-        bison \
-        build-base \
-        cairo-dev \
-        cmake \
-        fftw-dev \
-        flex \
-        git \
-        gobject-introspection-dev \
-        gst-plugins-base-dev \
-        gstreamer-dev \
-        liblo-dev \
-        libsamplerate-dev \
-        libsndfile-dev \
-        pkgconfig \
-        portaudio-dev
+    alsa-lib-dev \
+    bison \
+    build-base \
+    cairo-dev \
+    cmake \
+    fftw-dev \
+    flex \
+    git \
+    gobject-introspection-dev \
+    gst-plugins-base-dev \
+    gstreamer-dev \
+    liblo-dev \
+    libsamplerate-dev \
+    libsndfile-dev \
+    pkgconfig \
+    portaudio-dev
 
 # Build and install CSound
 RUN git clone --depth 1 https://github.com/csound/csound.git \
- && cd csound \
- && mkdir build \
- && cd build \
- && cmake .. \
- && make -j$(nproc) \
- && make install \
- && cd ../.. \
- && rm -rf csound
+    && cd csound \
+    && mkdir build \
+    && cd build \
+    && cmake .. \
+    && make -j$(nproc) \
+    && make install \
+    && cd ../.. \
+    && rm -rf csound
 
 WORKDIR /usr/src/gst-plugins-rs
 
 # Clone source of gst-plugins-rs to workdir
-ARG GST_PLUGINS_RS_TAG=gstreamer-1.22.2
+ARG GST_PLUGINS_RS_TAG=gstreamer-1.22.3
 RUN git clone -c advice.detachedHead=false \
     --single-branch --depth 1 \
     --branch ${GST_PLUGINS_RS_TAG} \
@@ -60,13 +60,13 @@ ENV CARGO_PROFILE_RELEASE_DEBUG false
 # try adding the RUSTFLAGS environment variable before the cargo build command to force the generation of dynamic librarie
 ENV RUSTFLAGS "-C target-feature=-crt-static"
 RUN export CSOUND_LIB_DIR="/usr/lib" \
- && export PLUGINS_DIR=$(pkg-config --variable=pluginsdir gstreamer-1.0) \
- && export SO_SUFFIX=so \
- && cargo build --release --no-default-features \
+    && export PLUGINS_DIR=$(pkg-config --variable=pluginsdir gstreamer-1.0) \
+    && export SO_SUFFIX=so \
+    && cargo build --release --no-default-features \
     --jobs $(nproc) \
     --package gst-plugin-spotify \
- && install -v -d ${DEST_DIR}/${PLUGINS_DIR} \
- && install -v -m 755 target/release/*.${SO_SUFFIX} ${DEST_DIR}/${PLUGINS_DIR}
+    && install -v -d ${DEST_DIR}/${PLUGINS_DIR} \
+    && install -v -m 755 target/release/*.${SO_SUFFIX} ${DEST_DIR}/${PLUGINS_DIR}
 
 RUN echo "build complete"
 
