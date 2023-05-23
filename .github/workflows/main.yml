@@ -48,7 +48,7 @@ jobs:
 
   build_arm64:
     needs: prepare
-    runs-on: ubuntu-latest
+    runs-on: buildjet-2vcpu-ubuntu-2204-arm
     env:
       GST_PLUGINS_RS_TAG: gstreamer-1.22.2
     steps:
@@ -62,10 +62,6 @@ jobs:
           key: ${{ runner.os }}-arm64-libgstspotify-${{ needs.prepare.outputs.dockerfile_hash }}-${{ env.GST_PLUGINS_RS_TAG }}
           restore-keys: |
             ${{ runner.os }}-arm64-libgstspotify-${{ needs.prepare.outputs.dockerfile_hash }}-
-
-      - name: Set up QEMU
-        if: steps.cache-build.outputs.cache-hit != 'true'
-        uses: docker/setup-qemu-action@v2
 
       - name: Set up Docker Buildx
         if: steps.cache-build.outputs.cache-hit != 'true'
