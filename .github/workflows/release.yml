@@ -22,7 +22,7 @@ jobs:
     needs: prepare
     runs-on: ubuntu-latest
     env:
-      GST_PLUGINS_RS_TAG: gstreamer-1.22.3
+      GST_PLUGINS_RS_TAG: gstreamer-1.22.4
     steps:
       - name: Checkout repository
         uses: actions/checkout@v3
@@ -65,7 +65,7 @@ jobs:
     needs: prepare
     runs-on: buildjet-2vcpu-ubuntu-2204-arm
     env:
-      GST_PLUGINS_RS_TAG: gstreamer-1.22.3
+      GST_PLUGINS_RS_TAG: gstreamer-1.22.4
     steps:
       - name: Checkout repository
         uses: actions/checkout@v3
