@@ -19,11 +19,11 @@ ARG TARGETPLATFORM
 RUN apk add --no-cache curl tar && \
     case "${TARGETPLATFORM}" in \
         "linux/amd64") \
-            curl -L -o libgstspotify-amd64.tar.gz https://github.com/troyxmccall/alpine-libgstspotify.so/releases/download/v1.22.6/libgstspotify-amd64.tar.gz && \
+            curl -L -o libgstspotify-amd64.tar.gz https://github.com/troyxmccall/alpine-libgstspotify.so/releases/download/v1.22.7/libgstspotify-amd64.tar.gz && \
             tar -xzf libgstspotify-amd64.tar.gz \
             ;; \
         "linux/arm64") \
-            curl -L -o libgstspotify-arm64.tar.gz https://github.com/troyxmccall/alpine-libgstspotify.so/releases/download/v1.22.6/libgstspotify-arm64.tar.gz && \
+            curl -L -o libgstspotify-arm64.tar.gz https://github.com/troyxmccall/alpine-libgstspotify.so/releases/download/v1.22.7/libgstspotify-arm64.tar.gz && \
             tar -xzf libgstspotify-arm64.tar.gz \
             ;; \
         *) \
