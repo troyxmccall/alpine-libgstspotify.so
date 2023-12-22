@@ -14,7 +14,7 @@ for a Alpine-based mopidy image
 
 ```dockerfile
 # Stage 1: download pre-build libgstspotify
-FROM alpine:latest AS libgstspotify-downloader
+FROM alpine:3.19 AS libgstspotify-downloader
 ARG TARGETPLATFORM
 RUN apk add --no-cache curl tar && \
     case "${TARGETPLATFORM}" in \
@@ -35,10 +35,10 @@ RUN apk add --no-cache curl tar && \
 ##############
 
 # Stage 2: Build
-FROM alpine:latest AS builder
-
+FROM alpine:3.19 AS builder
 # Set environment variables
-ENV PYTHON_VERSION=3.11
+ENV PYTHON_VERSION=3.12
+ENV VIRTUAL_ENV=/opt/venv
 
 # Install necessary packages
 RUN apk add --no-cache \
@@ -59,15 +59,24 @@ RUN apk add --no-cache \
         py3-wheel \
         python3-dev
 
+# Create virtual environment
+RUN python3 -m venv $VIRTUAL_ENV
+
+# Activate virtual environment
+ENV PATH="$VIRTUAL_ENV/bin:$PATH"
+
+# update pip
+RUN /opt/venv/bin/python3 -m pip install --no-cache-dir pip
+
 # Install Mopidy and its dependencies
-RUN pip install --no-cache-dir \
+RUN /opt/venv/bin/python3 -m pip install --no-cache-dir \
         Mopidy \
         Mopidy-Local \
         pygobject \
         cffi==1.15.0
 
 # Stage 3: Final - i only need pulseaudio bc that's how I stream audio from Docker - you might need to adjust these binaries for your final image depending on your stream preferences
-FROM alpine:latest AS reactify
+FROM alpine:3.19 AS final
 
 # Install necessary runtime packages
 RUN apk add --no-cache \
@@ -88,11 +97,17 @@ RUN apk add --no-cache \
         && addgroup -S mopidy \
         && adduser -S -G mopidy mopidy
 
-# Copy build artifacts from Stage 1: aka mopidy
+# Copy build artifacts from Stage 2: aka mopidy
 COPY --from=builder /usr/local/ /usr/local/
 
-# Copy libgstspotify.so from gst-builder stage
+# Copy libgstspotify.so from gst-builder stage 1
 COPY --from=libgstspotify-downloader /libgstspotify.so /usr/lib/gstreamer-1.0/libgstspotify.so
+
+# Copy the virtual environment from the builder stage
+COPY --from=builder /opt/venv /opt/venv
+
+# Set environment variable to use the virtual environment
+ENV PATH="/opt/venv/bin:$PATH"
 
 # Copy entrypoint, configuration, and pulseaudio files
 COPY docker/mopidy/alpine.entrypoint.sh /entrypoint.sh
@@ -100,22 +115,42 @@ COPY docker/mopidy/mopidy.example.conf /etc/mopidy/mopidy.conf
 COPY docker/mopidy/pulse-client.conf /etc/pulse/client.conf
 
 # Install custom mopidy-spotify plugin
-RUN git clone https://github.com/mopidy/mopidy-spotify.git mopidy-spotify \
+RUN git clone https://github.com/troyxmccall/mopidy-spotify.git mopidy-spotify \
  && cd mopidy-spotify \
- && python3 setup.py install \
+ && /opt/venv/bin/python3 setup.py install \
  && cd .. \
  && rm -rf mopidy-spotify
 
 # Remove git
 RUN apk del --no-cache git
 
-# Add/install your custom mopidy plugin/front-end here
+# @TODO - Add/install your custom mopidy plugin/front-end here
+
+# persistant mnt point for our logs (Write)
+RUN mkdir -p /home/mopidy/logs \
+ && chown -R mopidy:mopidy /home/mopidy/logs
+
+# alpine specific cache/config
+RUN mkdir -p /home/mopidy/.cache/mopidy \
+             /home/mopidy/.cache/gstreamer-1.0 \
+             /home/mopidy/.config/mopidy \
+             /home/mopidy/.local/share/mopidy/reactify \
+             /home/mopidy/.local/share/mopidy/spotify \
+             /home/mopidy/.local/share/mopidy/http \
+ && chown -R mopidy:mopidy /home/mopidy/.cache/mopidy \
+                           /home/mopidy/.cache/gstreamer-1.0 \
+                           /home/mopidy/.config/mopidy \
+                           /home/mopidy/.local/share/mopidy/reactify \
+                           /home/mopidy/.local/share/mopidy/spotify \
+                           /home/mopidy/.local/share/mopidy/http
+
 
 USER mopidy
 
 WORKDIR /home/mopidy
 
 EXPOSE 6600 6680
+
 ```
 
 # CI details:
