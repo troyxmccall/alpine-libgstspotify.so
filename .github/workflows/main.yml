@@ -12,7 +12,7 @@ jobs:
       dockerfile_hash: ${{ steps.calculate_hash.outputs.hash }}
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
 
       - name: Calculate Dockerfile hash
         id: calculate_hash
@@ -26,11 +26,11 @@ jobs:
       GST_PLUGINS_RS_TAG: gstreamer-1.22.9
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
 
       - name: Cache build artifacts
         id: cache-build
-        uses: actions/cache@v3
+        uses: actions/cache@v4
         with:
           path: ./output/linux/amd64/alpine
           key: ${{ runner.os }}-amd64-libgstspotify-${{ needs.prepare.outputs.dockerfile_hash }}-${{ env.GST_PLUGINS_RS_TAG }}
@@ -39,7 +39,7 @@ jobs:
 
       - name: Set up Docker Buildx
         if: steps.cache-build.outputs.cache-hit != 'true'
-        uses: docker/setup-buildx-action@v2
+        uses: docker/setup-buildx-action@v3
 
       - name: Build libgstspotify.so
         if: steps.cache-build.outputs.cache-hit != 'true'
@@ -53,10 +53,10 @@ jobs:
       GST_PLUGINS_RS_TAG: gstreamer-1.22.9
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
 
       - name: Cache build artifacts
-        uses: actions/cache@v3
+        uses: actions/cache@v4
         with:
           path: ./output/linux/arm64/alpine
           key: ${{ runner.os }}-arm64-libgstspotify-${{ needs.prepare.outputs.dockerfile_hash }}-${{ env.GST_PLUGINS_RS_TAG }}
@@ -65,7 +65,7 @@ jobs:
 
       - name: Set up Docker Buildx
         if: steps.cache-build.outputs.cache-hit != 'true'
-        uses: docker/setup-buildx-action@v2
+        uses: docker/setup-buildx-action@v3
 
       - name: Build libgstspotify.so
         if: steps.cache-build.outputs.cache-hit != 'true'
