@@ -14,7 +14,7 @@ for a Alpine-based mopidy image
 
 ```dockerfile
 # Stage 1: download pre-build libgstspotify
-FROM alpine:3.19 AS libgstspotify-downloader
+FROM alpine:3.18 AS libgstspotify-downloader
 ARG TARGETPLATFORM
 RUN apk add --no-cache curl tar && \
     case "${TARGETPLATFORM}" in \
@@ -35,7 +35,7 @@ RUN apk add --no-cache curl tar && \
 ##############
 
 # Stage 2: Build
-FROM alpine:3.19 AS builder
+FROM alpine:3.18 AS builder
 # Set environment variables
 ENV PYTHON_VERSION=3.12
 ENV VIRTUAL_ENV=/opt/venv
@@ -76,7 +76,7 @@ RUN /opt/venv/bin/python3 -m pip install --no-cache-dir \
         cffi==1.15.0
 
 # Stage 3: Final - i only need pulseaudio bc that's how I stream audio from Docker - you might need to adjust these binaries for your final image depending on your stream preferences
-FROM alpine:3.19 AS final
+FROM alpine:3.18 AS final
 
 # Install necessary runtime packages
 RUN apk add --no-cache \

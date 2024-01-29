@@ -1,4 +1,4 @@
-FROM rust:alpine AS gst-builder
+FROM rust:alpine3.18 AS gst-builder
 ARG TARGETPLATFORM
 ARG TARGETARCH
 ARG TARGETVARIANT
@@ -70,7 +70,7 @@ RUN export CSOUND_LIB_DIR="/usr/lib" \
 
 RUN echo "build complete"
 
-FROM alpine AS final
+FROM alpine:3.18 AS final
 
 RUN echo "handling final layer and copying over the files we need"
 COPY --from=gst-builder /target/gst-plugins-rs/usr/lib/gstreamer-1.0/libgstspotify.so /usr/lib/gstreamer-1.0/libgstspotify.so
