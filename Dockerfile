@@ -46,7 +46,7 @@ RUN git clone --depth 1 https://github.com/csound/csound.git \
 WORKDIR /usr/src/gst-plugins-rs
 
 # Clone source of gst-plugins-rs to workdir
-ARG GST_PLUGINS_RS_TAG=gstreamer-1.22.11
+ARG GST_PLUGINS_RS_TAG=gstreamer-1.22.12
 RUN git clone -c advice.detachedHead=false \
     --single-branch --depth 1 \
     --branch ${GST_PLUGINS_RS_TAG} \
@@ -79,6 +79,3 @@ RUN apk add --no-cache dumb-init
 
 ENTRYPOINT ["/usr/bin/dumb-init", "--"]
 CMD ["sh", "-c", "while true; do sleep 3600; done"]
-
-
-
