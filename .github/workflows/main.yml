@@ -6,68 +6,81 @@ on:
       - main
 
 jobs:
-  prepare:
+  build:
     runs-on: ubuntu-latest
-    outputs:
-      dockerfile_hash: ${{ steps.calculate_hash.outputs.hash }}
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
+    strategy:
+      matrix:
+        include:
+          - alpine-version: "3.18"
+            platform: linux/amd64
+            platform-name: linux-amd64
+            gst-plugins-rs-tag: gstreamer-1.22.12
+          - alpine-version: "3.18"
+            platform: linux/arm64
+            platform-name: linux-arm64
+            gst-plugins-rs-tag: gstreamer-1.22.12
+          - alpine-version: "3.19"
+            platform: linux/amd64
+            platform-name: linux-amd64
+            gst-plugins-rs-tag: gstreamer-1.22.12
+          - alpine-version: "3.19"
+            platform: linux/arm64
+            platform-name: linux-arm64
+            gst-plugins-rs-tag: gstreamer-1.22.12
+          - alpine-version: "3.20"
+            platform: linux/amd64
+            platform-name: linux-amd64
+            gst-plugins-rs-tag: gstreamer-1.24.3
+          - alpine-version: "3.20"
+            platform: linux/arm64
+            platform-name: linux-arm64
+            gst-plugins-rs-tag: gstreamer-1.24.3
 
-      - name: Calculate Dockerfile hash
-        id: calculate_hash
-        run: |
-          echo "hash=$(sha256sum Dockerfile | awk '{print $1}')" >> $GITHUB_ENV
-
-  build_amd64:
-    needs: prepare
-    runs-on: ubuntu-latest
     env:
-      GST_PLUGINS_RS_TAG: gstreamer-1.22.12
+      ALPINE_VERSION: ${{ matrix.alpine-version }}
+      TARGET_PLATFORM: ${{ matrix.platform }}
+      PLATFORM_NAME: ${{ matrix.platform-name }}
+      GST_PLUGINS_RS_TAG: ${{ matrix.gst-plugins-rs-tag }}
+
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
-
-      - name: Cache build artifacts
-        id: cache-build
-        uses: actions/cache@v4
-        with:
-          path: ./output/linux/amd64/alpine
-          key: ${{ runner.os }}-amd64-libgstspotify-${{ needs.prepare.outputs.dockerfile_hash }}-${{ env.GST_PLUGINS_RS_TAG }}
-          restore-keys: |
-            ${{ runner.os }}-amd64-libgstspotify-${{ needs.prepare.outputs.dockerfile_hash }}-
 
       - name: Set up Docker Buildx
-        if: steps.cache-build.outputs.cache-hit != 'true'
         uses: docker/setup-buildx-action@v3
 
       - name: Build libgstspotify.so
-        if: steps.cache-build.outputs.cache-hit != 'true'
         run: |
-          docker buildx build --platform linux/amd64 --tag libgstspotify-builder --load --target final --build-arg GST_PLUGINS_RS_TAG=${{ env.GST_PLUGINS_RS_TAG }} --progress=plain .
+          docker buildx build --platform ${{ matrix.platform }} --tag libgstspotify-builder \
+            --tag libgstspotify-${{ matrix.alpine-version }}-builder \
+            --load --target final \
+            --build-arg GST_PLUGINS_RS_TAG=${{ env.GST_PLUGINS_RS_TAG }} \
+            --build-arg ALPINE_VERSION=${{ env.ALPINE_VERSION }} \
+            --progress=plain .
 
-  build_arm64:
-    needs: prepare
-    runs-on: buildjet-2vcpu-ubuntu-2204-arm
-    env:
-      GST_PLUGINS_RS_TAG: gstreamer-1.22.12
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
+      - name: Save libgstspotify.so and checksums
+        run: |
+          # Create directory specific to platform, Alpine version, and GStreamer version
+          output_dir="./output/${{ matrix.platform-name }}/alpine-${{ matrix.alpine-version }}/gst-${{ env.GST_PLUGINS_RS_TAG }}"
+          mkdir -p $output_dir
 
-      - name: Cache build artifacts
-        uses: actions/cache@v4
+          # Create a Docker container from the built image
+          docker create --name libgstspotify-container libgstspotify-builder
+
+          # Copy the so file from the container to the host
+          docker cp libgstspotify-container:/usr/lib/gstreamer-1.0/libgstspotify.so $output_dir/libgstspotify.so
+
+          # Generate SHA256 checksum for the so file
+          sha256sum $output_dir/libgstspotify.so > $output_dir/libgstspotify.so.sha256
+
+          # Create a tar archive of the so file
+          tar czf $output_dir/libgstspotify.tar.gz -C $output_dir libgstspotify.so
+
+          # Generate SHA256 checksum for the tar archive
+          sha256sum $output_dir/libgstspotify.tar.gz > $output_dir/libgstspotify.tar.gz.sha256
+
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v4
         with:
-          path: ./output/linux/arm64/alpine
-          key: ${{ runner.os }}-arm64-libgstspotify-${{ needs.prepare.outputs.dockerfile_hash }}-${{ env.GST_PLUGINS_RS_TAG }}
-          restore-keys: |
-            ${{ runner.os }}-arm64-libgstspotify-${{ needs.prepare.outputs.dockerfile_hash }}-
-
-      - name: Set up Docker Buildx
-        if: steps.cache-build.outputs.cache-hit != 'true'
-        uses: docker/setup-buildx-action@v3
-
-      - name: Build libgstspotify.so
-        if: steps.cache-build.outputs.cache-hit != 'true'
-        run: |
-          docker buildx build --platform linux/arm64 --tag libgstspotify-builder --load --target final --build-arg GST_PLUGINS_RS_TAG=${{ env.GST_PLUGINS_RS_TAG }} --progress=plain .
+          name: alpine-${{ env.ALPINE_VERSION }}-${{ matrix.platform-name }}_${{ env.GST_PLUGINS_RS_TAG }}_libgstspotify
+          path: ./output/${{ matrix.platform-name }}/alpine-${{ env.ALPINE_VERSION }}
