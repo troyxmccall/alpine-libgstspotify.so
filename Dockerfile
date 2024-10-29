@@ -50,15 +50,12 @@ RUN git clone --depth 1 https://github.com/csound/csound.git \
 
 WORKDIR /usr/src/gst-plugins-rs
 
-# Clone source of gst-plugins-rs to workdir
-ARG GST_PLUGINS_RS_TAG=gstreamer-1.22.12
+# Clone fork of gst-plugins-rs to workdir
+ARG GST_PLUGINS_RS_TAG="spotify-access-token-logging"
 RUN git clone -c advice.detachedHead=false \
     --single-branch --depth 1 \
     --branch ${GST_PLUGINS_RS_TAG} \
-    https://gitlab.freedesktop.org/gstreamer/gst-plugins-rs.git ./
-
-# EXPERIMENTAL: For gstreamer-spotify set upgraded version number of dependency librespot to 0.4.2
-RUN sed -i 's/librespot = { version = "0.4", default-features = false }/librespot = { version = "0.4.2", default-features = false }/g' audio/spotify/Cargo.toml
+    https://gitlab.freedesktop.org/kingosticks/gst-plugins-rs.git ./
 
 # Build GStreamer plugins written in Rust (optional with --no-default-features)
 ENV DEST_DIR /target/gst-plugins-rs
