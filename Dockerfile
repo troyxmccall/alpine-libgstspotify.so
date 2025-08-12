@@ -58,7 +58,7 @@ RUN git clone -c advice.detachedHead=false \
 # Update Cargo.toml to use librespot dev branch from GitHub
 RUN sed -i 's/librespot-core = "0\.6"/librespot-core = { git = "https:\/\/github.com\/librespot-org\/librespot", branch = "dev" }/g' audio/spotify/Cargo.toml && \
     sed -i 's/librespot-metadata = "0\.6"/librespot-metadata = { git = "https:\/\/github.com\/librespot-org\/librespot", branch = "dev" }/g' audio/spotify/Cargo.toml && \
-    sed -i 's/librespot-playback = { version = "0\.6", features = \[\x27passthrough-decoder\x27\] }/librespot-playback = { git = "https:\/\/github.com\/librespot-org\/librespot", branch = "dev", features = [\x27passthrough-decoder\x27] }/g' audio/spotify/Cargo.toml
+    sed -i 's/librespot-playback = { version = "0\.6", features = \[\x27passthrough-decoder\x27\] }/librespot-playback = { git = "https:\/\/github.com\/librespot-org\/librespot", branch = "dev", features = ["passthrough-decoder"] }/g' audio/spotify/Cargo.toml
 
 # Build GStreamer plugins written in Rust (optional with --no-default-features)
 ENV DEST_DIR /target/gst-plugins-rs
