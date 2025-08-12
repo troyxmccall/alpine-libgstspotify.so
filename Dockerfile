@@ -1,17 +1,12 @@
-# Base image stage to allow the Alpine version to be dynamic
-ARG ALPINE_VERSION=3.18
-FROM rust:alpine${ALPINE_VERSION} AS gst-builder
-
+FROM rust:alpine3.19 AS gst-builder
 ARG TARGETPLATFORM
 ARG TARGETARCH
 ARG TARGETVARIANT
-ARG ALPINE_VERSION
 
 # Print Info about current build Target
 RUN printf "I'm building for TARGETPLATFORM=${TARGETPLATFORM}" \
     && printf ", TARGETARCH=${TARGETARCH}" \
-    && printf ", TARGETVARIANT=${TARGETVARIANT}\n" \
-    && printf "Alpine Version: ${ALPINE_VERSION}\n" \
+    && printf ", TARGETVARIANT=${TARGETVARIANT} \n" \
     && printf "With uname -s : " && uname -s \
     && printf "and  uname -m : " && uname -m
 
@@ -50,17 +45,17 @@ RUN git clone --depth 1 https://github.com/csound/csound.git \
 
 WORKDIR /usr/src/gst-plugins-rs
 
-# Clone fork of gst-plugins-rs to workdir
-ARG GST_PLUGINS_RS_TAG="spotify-access-token-logging"
+# Clone source of gst-plugins-rs to workdir
+ARG GST_PLUGINS_RS_TAG= 0.14.1
 RUN git clone -c advice.detachedHead=false \
     --single-branch --depth 1 \
     --branch ${GST_PLUGINS_RS_TAG} \
-    https://gitlab.freedesktop.org/kingosticks/gst-plugins-rs.git ./
+    https://gitlab.freedesktop.org/gstreamer/gst-plugins-rs.git ./
 
 # Build GStreamer plugins written in Rust (optional with --no-default-features)
 ENV DEST_DIR /target/gst-plugins-rs
 ENV CARGO_PROFILE_RELEASE_DEBUG false
- # try adding the RUSTFLAGS environment variable before the cargo build command to force the generation of dynamic libraries
+# try adding the RUSTFLAGS environment variable before the cargo build command to force the generation of dynamic librarie
 ENV RUSTFLAGS "-C target-feature=-crt-static"
 RUN export CSOUND_LIB_DIR="/usr/lib" \
     && export PLUGINS_DIR=$(pkg-config --variable=pluginsdir gstreamer-1.0) \
@@ -73,11 +68,10 @@ RUN export CSOUND_LIB_DIR="/usr/lib" \
 
 RUN echo "build complete"
 
-# Using ARG ALPINE_VERSION again for the final stage
-FROM alpine:${ALPINE_VERSION} AS final
+FROM alpine:3.19 AS final
 
 RUN echo "handling final layer and copying over the files we need"
-COPY --from=gst-builder /target/gst-plugins-rs/usr/lib/gstreamer-1.0/libgstspotify.so /usr/lib/gstreamer-1.0/
+COPY --from=gst-builder /target/gst-plugins-rs/usr/lib/gstreamer-1.0/libgstspotify.so /usr/lib/gstreamer-1.0/libgstspotify.so
 
 RUN apk add --no-cache dumb-init
 
