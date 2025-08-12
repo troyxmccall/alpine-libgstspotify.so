@@ -22,6 +22,9 @@ jobs:
   build_amd64:
     needs: prepare
     runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        alpine_version: ['3.18', '3.19', '3.20']
     env:
       GST_PLUGINS_RS_TAG: 0.14.1
     steps:
@@ -32,10 +35,10 @@ jobs:
         id: cache-build
         uses: actions/cache@v4
         with:
-          path: ./output/linux/amd64/alpine
-          key: ${{ runner.os }}-amd64-libgstspotify-${{ needs.prepare.outputs.dockerfile_hash }}-${{ env.GST_PLUGINS_RS_TAG }}
+          path: ./output/linux/amd64/alpine${{ matrix.alpine_version }}
+          key: ${{ runner.os }}-amd64-alpine${{ matrix.alpine_version }}-libgstspotify-${{ needs.prepare.outputs.dockerfile_hash }}-${{ env.GST_PLUGINS_RS_TAG }}
           restore-keys: |
-            ${{ runner.os }}-amd64-libgstspotify-${{ needs.prepare.outputs.dockerfile_hash }}-
+            ${{ runner.os }}-amd64-alpine${{ matrix.alpine_version }}-libgstspotify-${{ needs.prepare.outputs.dockerfile_hash }}-
 
       - name: Set up Docker Buildx
         if: steps.cache-build.outputs.cache-hit != 'true'
@@ -44,11 +47,14 @@ jobs:
       - name: Build libgstspotify.so
         if: steps.cache-build.outputs.cache-hit != 'true'
         run: |
-          docker buildx build --platform linux/amd64 --tag libgstspotify-builder --load --target final --build-arg GST_PLUGINS_RS_TAG=${{ env.GST_PLUGINS_RS_TAG }} --progress=plain .
+          docker buildx build --platform linux/amd64 --tag libgstspotify-builder-alpine${{ matrix.alpine_version }} --load --target final --build-arg GST_PLUGINS_RS_TAG=${{ env.GST_PLUGINS_RS_TAG }} --build-arg ALPINE_VERSION=${{ matrix.alpine_version }} --progress=plain .
 
   build_arm64:
     needs: prepare
     runs-on: buildjet-2vcpu-ubuntu-2204-arm
+    strategy:
+      matrix:
+        alpine_version: ['3.18', '3.19', '3.20']
     env:
       GST_PLUGINS_RS_TAG: 0.14.1
     steps:
@@ -58,10 +64,10 @@ jobs:
       - name: Cache build artifacts
         uses: actions/cache@v4
         with:
-          path: ./output/linux/arm64/alpine
-          key: ${{ runner.os }}-arm64-libgstspotify-${{ needs.prepare.outputs.dockerfile_hash }}-${{ env.GST_PLUGINS_RS_TAG }}
+          path: ./output/linux/arm64/alpine${{ matrix.alpine_version }}
+          key: ${{ runner.os }}-arm64-alpine${{ matrix.alpine_version }}-libgstspotify-${{ needs.prepare.outputs.dockerfile_hash }}-${{ env.GST_PLUGINS_RS_TAG }}
           restore-keys: |
-            ${{ runner.os }}-arm64-libgstspotify-${{ needs.prepare.outputs.dockerfile_hash }}-
+            ${{ runner.os }}-arm64-alpine${{ matrix.alpine_version }}-libgstspotify-${{ needs.prepare.outputs.dockerfile_hash }}-
 
       - name: Set up Docker Buildx
         if: steps.cache-build.outputs.cache-hit != 'true'
@@ -70,4 +76,4 @@ jobs:
       - name: Build libgstspotify.so
         if: steps.cache-build.outputs.cache-hit != 'true'
         run: |
-          docker buildx build --platform linux/arm64 --tag libgstspotify-builder --load --target final --build-arg GST_PLUGINS_RS_TAG=${{ env.GST_PLUGINS_RS_TAG }} --progress=plain .
+          docker buildx build --platform linux/arm64 --tag libgstspotify-builder-alpine${{ matrix.alpine_version }} --load --target final --build-arg GST_PLUGINS_RS_TAG=${{ env.GST_PLUGINS_RS_TAG }} --build-arg ALPINE_VERSION=${{ matrix.alpine_version }} --progress=plain .

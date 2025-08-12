@@ -1,12 +1,15 @@
-FROM rust:alpine3.19 AS gst-builder
+ARG ALPINE_VERSION=3.19
+FROM rust:alpine${ALPINE_VERSION} AS gst-builder
 ARG TARGETPLATFORM
 ARG TARGETARCH
 ARG TARGETVARIANT
+ARG ALPINE_VERSION
 
 # Print Info about current build Target
 RUN printf "I'm building for TARGETPLATFORM=${TARGETPLATFORM}" \
     && printf ", TARGETARCH=${TARGETARCH}" \
-    && printf ", TARGETVARIANT=${TARGETVARIANT} \n" \
+    && printf ", TARGETVARIANT=${TARGETVARIANT}" \
+    && printf ", ALPINE_VERSION=${ALPINE_VERSION} \n" \
     && printf "With uname -s : " && uname -s \
     && printf "and  uname -m : " && uname -m
 
@@ -52,6 +55,11 @@ RUN git clone -c advice.detachedHead=false \
     --branch ${GST_PLUGINS_RS_TAG} \
     https://gitlab.freedesktop.org/gstreamer/gst-plugins-rs.git ./
 
+# Update Cargo.toml to use librespot dev branch from GitHub
+RUN sed -i 's/librespot-core = "0\.6"/librespot-core = { git = "https:\/\/github.com\/librespot-org\/librespot", branch = "dev" }/g' audio/spotify/Cargo.toml && \
+    sed -i 's/librespot-metadata = "0\.6"/librespot-metadata = { git = "https:\/\/github.com\/librespot-org\/librespot", branch = "dev" }/g' audio/spotify/Cargo.toml && \
+    sed -i 's/librespot-playback = { version = "0\.6", features = \[\x27passthrough-decoder\x27\] }/librespot-playback = { git = "https:\/\/github.com\/librespot-org\/librespot", branch = "dev", features = [\x27passthrough-decoder\x27] }/g' audio/spotify/Cargo.toml
+
 # Build GStreamer plugins written in Rust (optional with --no-default-features)
 ENV DEST_DIR /target/gst-plugins-rs
 ENV CARGO_PROFILE_RELEASE_DEBUG false
@@ -68,7 +76,8 @@ RUN export CSOUND_LIB_DIR="/usr/lib" \
 
 RUN echo "build complete"
 
-FROM alpine:3.19 AS final
+FROM alpine:${ALPINE_VERSION} AS final
+ARG ALPINE_VERSION
 
 RUN echo "handling final layer and copying over the files we need"
 COPY --from=gst-builder /target/gst-plugins-rs/usr/lib/gstreamer-1.0/libgstspotify.so /usr/lib/gstreamer-1.0/libgstspotify.so
