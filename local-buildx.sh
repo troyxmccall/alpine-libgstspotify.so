@@ -2,8 +2,8 @@
 
 set -euo pipefail
 
-ALPINE_VERSION="${ALPINE_VERSION:-3.19}"
-GST_PLUGINS_RS_TAG="${GST_PLUGINS_RS_TAG:-0.14.1}"
+ALPINE_VERSION="${ALPINE_VERSION:-3.20}"
+GST_PLUGINS_RS_TAG="${GST_PLUGINS_RS_TAG:-0.14.3}"
 PLATFORM="${PLATFORM:-$(docker version --format '{{.Server.Os}}/{{.Server.Arch}}')}"
 
 echo "Building libgstspotify.so for Alpine ${ALPINE_VERSION} on platform ${PLATFORM}"

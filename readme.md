@@ -14,7 +14,7 @@ for a Alpine-based mopidy image
 
 ```dockerfile
 # Stage 1: download pre-build libgstspotify
-FROM alpine:3.19 AS libgstspotify-downloader
+FROM alpine:3.20 AS libgstspotify-downloader
 ARG TARGETPLATFORM
 RUN apk add --no-cache curl tar && \
     case "${TARGETPLATFORM}" in \
