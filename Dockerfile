@@ -55,10 +55,16 @@ RUN git clone -c advice.detachedHead=false \
     --branch ${GST_PLUGINS_RS_TAG} \
     https://gitlab.freedesktop.org/gstreamer/gst-plugins-rs.git ./
 
-# Update Cargo.toml to use librespot dev branch from GitHub
-RUN sed -i 's/librespot-core = "0\.8\.0"/librespot-core = { git = "https:\/\/github.com\/librespot-org\/librespot", branch = "dev" }/g' audio/spotify/Cargo.toml && \
-    sed -i 's/librespot-metadata = "0\.8\.0"/librespot-metadata = { git = "https:\/\/github.com\/librespot-org\/librespot", branch = "dev" }/g' audio/spotify/Cargo.toml && \
-    sed -i 's/librespot-playback = { version = "0\.8\.0", features = \[\x27passthrough-decoder\x27\] }/librespot-playback = { git = "https:\/\/github.com\/librespot-org\/librespot", branch = "dev", features = ["passthrough-decoder"] }/g' audio/spotify/Cargo.toml
+# Update Cargo.toml to use librespot 0.8
+RUN sed -i 's/librespot-core = { version = "0\.7"/librespot-core = { version = "0.8"/g' audio/spotify/Cargo.toml && \
+    sed -i 's/librespot-metadata = { version = "0\.7"/librespot-metadata = { version = "0.8"/g' audio/spotify/Cargo.toml && \
+    sed -i 's/librespot-playback = { version = "0\.7"/librespot-playback = { version = "0.8"/g' audio/spotify/Cargo.toml
+
+# Patch 1: Fix URI Parsing in audio/spotify/src/common.rs
+RUN sed -i '/let track = SpotifyId::from_uri(&self\.track)?;/c\        let id = self.track.split('"'"':'"'"').last().unwrap_or_default();\n        let track = SpotifyId::from_base62(id)?;' audio/spotify/src/common.rs
+
+# Patch 2: Fix Player Load Method in audio/spotify/src/spotifyaudiosrc/imp.rs
+RUN sed -i 's/player\.load(track, true, 0);/player.load(librespot_core::SpotifyUri::Track { id: track }, true, 0);/g' audio/spotify/src/spotifyaudiosrc/imp.rs
 
 # Build GStreamer plugins written in Rust (optional with --no-default-features)
 ENV DEST_DIR /target/gst-plugins-rs
